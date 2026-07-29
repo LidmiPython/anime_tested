@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Anime Stream Mini App</title>
+    <title>Anime Stream</title>
     <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <!-- Google Fonts -->
@@ -14,7 +14,7 @@
     <style>
         :root {
             --bg-color: #090a10;
-            --card-bg: rgba(22, 25, 38, 0.75);
+            --card-bg: rgba(22, 25, 38, 0.85);
             --card-border: rgba(255, 255, 255, 0.08);
             --accent-primary: #00f2fe;
             --accent-secondary: #4facfe;
@@ -28,9 +28,10 @@
         * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
 
         html, body {
-            width: 100vw;
-            height: 100vh;
-            overflow: hidden;
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
             background: var(--bg-color);
             background-image: 
                 radial-gradient(at 0% 0%, rgba(79, 172, 254, 0.12) 0px, transparent 50%),
@@ -38,13 +39,29 @@
             color: var(--text-main);
             font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
             display: flex;
-            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            overflow: hidden;
         }
 
-        /* Плеер */
+        /* Главный контейнер (ограничение 900px для ПК) */
+        .app-container {
+            width: 100%;
+            max-width: 900px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: rgba(9, 10, 16, 0.95);
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.9);
+            border-left: 1px solid var(--card-border);
+            border-right: 1px solid var(--card-border);
+        }
+
+        /* Плеер с зафиксированной высотой (максимум 48% высоты экрана) */
         .player-wrapper {
             width: 100%;
             aspect-ratio: 16 / 9;
+            max-height: 48vh;
             background: #000;
             position: relative;
             flex-shrink: 0;
@@ -70,8 +87,8 @@
             scroll-behavior: smooth;
         }
 
-        .scrollable-content::-webkit-scrollbar { width: 4px; }
-        .scrollable-content::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 4px; }
+        .scrollable-content::-webkit-scrollbar { width: 6px; }
+        .scrollable-content::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.18); border-radius: 6px; }
 
         /* Карточка аниме */
         .hero-card {
@@ -263,55 +280,57 @@
 </head>
 <body>
 
-    <!-- Плеер -->
-    <div class="player-wrapper">
-        <div id="loader" class="loading-screen">
-            <div class="spinner"></div>
-            <div>Загрузка плеера...</div>
+    <div class="app-container">
+        <!-- Плеер (Max 48% высоты) -->
+        <div class="player-wrapper">
+            <div id="loader" class="loading-screen">
+                <div class="spinner"></div>
+                <div>Загрузка плеера...</div>
+            </div>
+            <iframe id="anime-iframe" src="" allow="fullscreen; autoplay" allowfullscreen style="display: none;"></iframe>
         </div>
-        <iframe id="anime-iframe" src="" allow="fullscreen; autoplay" allowfullscreen style="display: none;"></iframe>
-    </div>
 
-    <!-- Основной контент -->
-    <div class="scrollable-content">
+        <!-- Основной прокручиваемый контент -->
+        <div class="scrollable-content">
 
-        <!-- Постер и название -->
-        <div class="hero-card">
-            <img id="anime-poster" class="poster-img" src="https://static.yani.tv/img/no-photo.jpg" alt="Poster">
-            <div class="hero-info">
-                <div id="anime-title" class="anime-title">Загрузка...</div>
-                <div class="badges-row">
-                    <div id="badge-status" class="badge badge-status">Загрузка</div>
-                    <div id="badge-episodes" class="badge">Серий: --</div>
+            <!-- Постер и название -->
+            <div class="hero-card">
+                <img id="anime-poster" class="poster-img" src="https://static.yani.tv/img/no-photo.jpg" alt="Poster">
+                <div class="hero-info">
+                    <div id="anime-title" class="anime-title">Загрузка...</div>
+                    <div class="badges-row">
+                        <div id="badge-status" class="badge badge-status">Загрузка</div>
+                        <div id="badge-episodes" class="badge">Серий: --</div>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        <!-- 1. Выбор Озвучки -->
-        <div>
-            <div class="section-header">
-                <div class="section-title">🎙 Озвучка</div>
+            <!-- 1. Выбор Озвучки -->
+            <div>
+                <div class="section-header">
+                    <div class="section-title">🎙 Озвучка</div>
+                </div>
+                <div id="dubbing-container" class="pills-scroll-container"></div>
             </div>
-            <div id="dubbing-container" class="pills-scroll-container"></div>
-        </div>
 
-        <!-- 2. Выбор Плеера -->
-        <div>
-            <div class="section-header">
-                <div class="section-title">📺 Плеер</div>
+            <!-- 2. Выбор Плеера -->
+            <div>
+                <div class="section-header">
+                    <div class="section-title">📺 Плеер</div>
+                </div>
+                <div id="player-container" class="pills-scroll-container"></div>
             </div>
-            <div id="player-container" class="pills-scroll-container"></div>
-        </div>
 
-        <!-- 3. Выбор Серии -->
-        <div>
-            <div class="section-header">
-                <div class="section-title">▶️ Серии</div>
-                <input type="number" id="ep-search" class="ep-search-input" placeholder="№..." oninput="filterEpisodes()">
+            <!-- 3. Выбор Серии -->
+            <div>
+                <div class="section-header">
+                    <div class="section-title">▶️ Серии</div>
+                    <input type="number" id="ep-search" class="ep-search-input" placeholder="№..." oninput="filterEpisodes()">
+                </div>
+                <div id="episodes-container" class="episodes-grid"></div>
             </div>
-            <div id="episodes-container" class="episodes-grid"></div>
-        </div>
 
+        </div>
     </div>
 
     <script>
@@ -325,7 +344,6 @@
         const animeId = urlParams.get('anime_id') || '12094';
 
         let videos = [];
-        // Иерархия: dataStore[dubbingName][playerName] = [videoObj1, videoObj2...]
         let dataStore = {};
         let currentDubbing = '';
         let currentPlayer = '';
@@ -374,7 +392,6 @@
                     return;
                 }
 
-                // Строим иерархическую структуру dataStore[dubbing][player] = [...]
                 dataStore = {};
                 videos.forEach(v => {
                     const dub = v.data?.dubbing || 'Озвучка';
@@ -386,7 +403,6 @@
                     dataStore[dub][player].push(v);
                 });
 
-                // Сортируем серии
                 Object.keys(dataStore).forEach(dub => {
                     Object.keys(dataStore[dub]).forEach(player => {
                         dataStore[dub][player].sort((a, b) => parseInt(a.number || 0) - parseInt(b.number || 0));
@@ -400,7 +416,6 @@
             }
         }
 
-        // Рендер ряда озвучек
         function renderDubbings() {
             const container = document.getElementById('dubbing-container');
             container.innerHTML = '';
@@ -426,7 +441,6 @@
             renderPlayers();
         }
 
-        // Рендер ряда плееров под выбранную озвучку
         function renderPlayers() {
             const container = document.getElementById('player-container');
             container.innerHTML = '';
@@ -453,7 +467,6 @@
             renderEpisodes();
         }
 
-        // Рендер сетки серий
         function renderEpisodes() {
             const container = document.getElementById('episodes-container');
             container.innerHTML = '';
