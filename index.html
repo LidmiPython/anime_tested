@@ -3,30 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Anime Web Player</title>
+    <title>Anime Player</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * { box-sizing: border-box; }
-        html, body {
+        body {
             margin: 0;
             padding: 0;
-            width: 100vw;
-            height: 100vh;
-            overflow: hidden;
-            background: #0d0d11;
+            background: #17212b;
             color: #fff;
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
             display: flex;
             flex-direction: column;
+            height: 100vh;
+            overflow-x: hidden;
         }
 
-        /* Видеоплеер на 100% свободной высоты и ширины ПК/мобильного */
-        .player-wrapper {
-            flex: 1;
+        /* 16:9 Видеоплеер на всю ширину окна Telegram Desktop */
+        .player-container {
             width: 100%;
-            height: 100%;
-            position: relative;
+            aspect-ratio: 16 / 9;
             background: #000;
+            position: relative;
+            flex-shrink: 0;
         }
 
         iframe {
@@ -35,55 +34,81 @@
             border: none;
         }
 
-        /* Нижная панель управления */
-        .controls-container {
-            flex-shrink: 0;
-            padding: 12px 16px;
-            background: #18181c;
-            border-top: 1px solid #2a2a30;
+        /* Контент под видео */
+        .content {
+            padding: 14px;
+            flex: 1;
+            overflow-y: auto;
             display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 12px;
+            flex-direction: column;
+            gap: 16px;
         }
 
-        .control-group {
+        .title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #64b5f6;
+            margin-bottom: 2px;
+        }
+
+        .section-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            color: #7f91a4;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        /* Табы озвучек */
+        .dubbing-list {
             display: flex;
-            align-items: center;
+            flex-wrap: wrap;
             gap: 8px;
         }
 
-        label {
-            font-size: 13px;
-            color: #aaa;
-            font-weight: 500;
-            white-space: nowrap;
-        }
-
-        select {
-            padding: 8px 12px;
-            background: #24242c;
+        .dub-btn {
+            padding: 8px 14px;
+            background: #242f3d;
             color: #fff;
-            border: 1px solid #3a3a46;
-            border-radius: 8px;
-            font-size: 14px;
-            outline: none;
+            border: 1px solid #2b394a;
+            border-radius: 20px;
+            font-size: 13px;
             cursor: pointer;
-            min-width: 120px;
+            transition: all 0.2s ease;
         }
 
-        select:focus {
-            border-color: #0088cc;
-        }
-
-        .title-header {
-            font-size: 15px;
+        .dub-btn.active {
+            background: #2b5278;
+            border-color: #64b5f6;
+            color: #64b5f6;
             font-weight: 600;
-            color: #40a9ff;
-            width: 100%;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+        }
+
+        /* Сетка серий */
+        .episodes-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(54px, 1fr));
+            gap: 8px;
+        }
+
+        .ep-btn {
+            padding: 10px 0;
+            background: #242f3d;
+            color: #fff;
+            border: 1px solid #2b394a;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .ep-btn.active {
+            background: #64b5f6;
+            border-color: #64b5f6;
+            color: #17212b;
         }
 
         .loading {
@@ -91,28 +116,28 @@
             align-items: center;
             justify-content: center;
             height: 100%;
-            font-size: 16px;
-            color: #888;
+            font-size: 15px;
+            color: #7f91a4;
         }
     </style>
 </head>
 <body>
-    <div class="player-wrapper">
+    <div class="player-container">
         <div id="loader" class="loading">⏳ Загрузка плеера...</div>
         <iframe id="anime-iframe" src="" allow="fullscreen; autoplay" allowfullscreen style="display: none;"></iframe>
     </div>
 
-    <div class="controls-container">
-        <div id="anime-title" class="title-header">Загрузка...</div>
+    <div class="content">
+        <div id="anime-title" class="title">Аниме</div>
 
-        <div class="control-group">
-            <label for="dubbing-select">🎙 Озвучка:</label>
-            <select id="dubbing-select" onchange="onDubbingChange()"></select>
+        <div>
+            <div class="section-label">🎙 Выберите озвучку / плеер:</div>
+            <div id="dubbing-container" class="dubbing-list"></div>
         </div>
 
-        <div class="control-group">
-            <label for="episode-select">▶️ Серия:</label>
-            <select id="episode-select" onchange="onEpisodeChange()"></select>
+        <div>
+            <div class="section-label">▶️ Выберите серию:</div>
+            <div id="episodes-container" class="episodes-grid"></div>
         </div>
     </div>
 
@@ -128,17 +153,15 @@
 
         let videos = [];
         let groupedByDubbing = {};
+        let currentDubKey = '';
+        let currentIframeUrl = '';
 
         async function fetchWithCorsFallback(apiUrl) {
-            // 1. Попытка прямого запроса
             try {
                 const resp = await fetch(apiUrl);
                 if (resp.ok) return await resp.json();
-            } catch (e) {
-                console.warn('Direct fetch blocked by CORS, trying proxy...');
-            }
+            } catch (e) {}
 
-            // 2. Резервный запуск через CORS Proxy для 100% гарантии на ПК
             const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`;
             const proxyResp = await fetch(proxyUrl);
             const proxyJson = await proxyResp.json();
@@ -159,7 +182,7 @@
                     return;
                 }
 
-                // Группируем серии по озвучкам
+                // Группировка
                 groupedByDubbing = {};
                 videos.forEach(v => {
                     const player = v.data?.player || 'Плеер';
@@ -170,57 +193,64 @@
                     groupedByDubbing[key].push(v);
                 });
 
-                // Сортировка серий
                 Object.keys(groupedByDubbing).forEach(key => {
                     groupedByDubbing[key].sort((a, b) => parseInt(a.number || 0) - parseInt(b.number || 0));
                 });
 
-                populateDubbings();
+                renderDubbings();
             } catch (err) {
                 console.error(err);
-                document.getElementById('loader').innerText = '❌ Ошибка загрузки видеозаписей.';
+                document.getElementById('loader').innerText = '❌ Ошибка загрузки данных.';
             }
         }
 
-        function populateDubbings() {
-            const dubSelect = document.getElementById('dubbing-select');
-            dubSelect.innerHTML = '';
+        function renderDubbings() {
+            const container = document.getElementById('dubbing-container');
+            container.innerHTML = '';
 
             const keys = Object.keys(groupedByDubbing);
+            if (!keys.length) return;
+
+            currentDubKey = keys[0];
+
             keys.forEach(key => {
-                const opt = document.createElement('option');
-                opt.value = key;
-                opt.textContent = key;
-                dubSelect.appendChild(opt);
+                const btn = document.createElement('button');
+                btn.className = `dub-btn ${key === currentDubKey ? 'active' : ''}`;
+                btn.innerText = key;
+                btn.onclick = () => {
+                    currentDubKey = key;
+                    document.querySelectorAll('.dub-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    renderEpisodes();
+                };
+                container.appendChild(btn);
             });
 
-            if (keys.length > 0) {
-                dubSelect.value = keys[0];
-                onDubbingChange();
-            }
+            renderEpisodes();
         }
 
-        function onDubbingChange() {
-            const selectedDub = document.getElementById('dubbing-select').value;
-            const epSelect = document.getElementById('episode-select');
-            epSelect.innerHTML = '';
+        function renderEpisodes() {
+            const container = document.getElementById('episodes-container');
+            container.innerHTML = '';
 
-            const epList = groupedByDubbing[selectedDub] || [];
-            epList.forEach(v => {
-                const opt = document.createElement('option');
-                opt.value = v.iframe_url;
-                opt.textContent = `${v.number} серия`;
-                epSelect.appendChild(opt);
+            const epList = groupedByDubbing[currentDubKey] || [];
+            if (!epList.length) return;
+
+            currentIframeUrl = epList[0].iframe_url;
+
+            epList.forEach((v, index) => {
+                const btn = document.createElement('button');
+                btn.className = `ep-btn ${index === 0 ? 'active' : ''}`;
+                btn.innerText = v.number;
+                btn.onclick = () => {
+                    document.querySelectorAll('.ep-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    setIframeUrl(v.iframe_url);
+                };
+                container.appendChild(btn);
             });
 
-            if (epList.length > 0) {
-                setIframeUrl(epList[0].iframe_url);
-            }
-        }
-
-        function onEpisodeChange() {
-            const iframeUrl = document.getElementById('episode-select').value;
-            setIframeUrl(iframeUrl);
+            setIframeUrl(currentIframeUrl);
         }
 
         function setIframeUrl(url) {
