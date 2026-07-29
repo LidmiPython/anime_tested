@@ -3,142 +3,302 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Anime Player</title>
+    <title>Anime Stream Mini App</title>
+    <!-- Telegram WebApp SDK -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
     <style>
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            padding: 0;
-            background: #17212b;
-            color: #fff;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow-x: hidden;
+        :root {
+            --bg-color: #090a10;
+            --card-bg: rgba(22, 25, 38, 0.75);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --accent-primary: #00f2fe;
+            --accent-secondary: #4facfe;
+            --accent-glow: rgba(0, 242, 254, 0.35);
+            --text-main: #f0f3f8;
+            --text-sub: #94a3b8;
+            --active-gradient: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+            --active-button-glow: 0 4px 20px rgba(0, 242, 254, 0.4);
         }
 
-        /* 16:9 Видеоплеер на всю ширину окна Telegram Desktop */
-        .player-container {
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-tap-highlight-color: transparent; }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: var(--bg-color);
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(79, 172, 254, 0.12) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(127, 0, 255, 0.12) 0px, transparent 50%);
+            color: var(--text-main);
+            font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Плеер */
+        .player-wrapper {
             width: 100%;
             aspect-ratio: 16 / 9;
             background: #000;
             position: relative;
             flex-shrink: 0;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+            border-bottom: 1px solid var(--card-border);
         }
 
         iframe {
             width: 100%;
             height: 100%;
             border: none;
+            display: block;
         }
 
         /* Контент под видео */
-        .content {
-            padding: 14px;
+        .scrollable-content {
             flex: 1;
             overflow-y: auto;
+            padding: 16px;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 20px;
+            scroll-behavior: smooth;
         }
 
-        .title {
+        /* Кастомный скроллбар */
+        .scrollable-content::-webkit-scrollbar { width: 4px; }
+        .scrollable-content::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 4px; }
+
+        /* Карточка аниме */
+        .hero-card {
+            display: flex;
+            gap: 14px;
+            background: var(--card-bg);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--card-border);
+            border-radius: 16px;
+            padding: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+
+        .poster-img {
+            width: 65px;
+            height: 90px;
+            border-radius: 10px;
+            object-fit: cover;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .hero-info {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 6px;
+            overflow: hidden;
+        }
+
+        .anime-title {
             font-size: 16px;
             font-weight: 700;
-            color: #64b5f6;
-            margin-bottom: 2px;
+            color: #fff;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.2;
         }
 
-        .section-label {
-            font-size: 12px;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            color: #7f91a4;
-            margin-bottom: 8px;
+        .badges-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .badge {
+            font-size: 11px;
             font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: var(--text-sub);
+        }
+
+        .badge-status { background: rgba(0, 242, 254, 0.12); color: var(--accent-primary); border-color: rgba(0, 242, 254, 0.25); }
+
+        /* Заголовки секций */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .section-title {
+            font-size: 13px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-sub);
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         /* Табы озвучек */
-        .dubbing-list {
+        .dubbing-container {
             display: flex;
-            flex-wrap: wrap;
             gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 4px;
         }
+        .dubbing-container::-webkit-scrollbar { display: none; }
 
-        .dub-btn {
-            padding: 8px 14px;
-            background: #242f3d;
-            color: #fff;
-            border: 1px solid #2b394a;
-            border-radius: 20px;
+        .dub-pill {
+            padding: 9px 16px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 30px;
             font-size: 13px;
+            font-weight: 500;
+            color: var(--text-sub);
+            white-space: nowrap;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(12px);
         }
 
-        .dub-btn.active {
-            background: #2b5278;
-            border-color: #64b5f6;
-            color: #64b5f6;
-            font-weight: 600;
+        .dub-pill.active {
+            background: var(--active-gradient);
+            color: #090a10;
+            border-color: transparent;
+            font-weight: 700;
+            box-shadow: var(--active-button-glow);
+            transform: translateY(-1px);
         }
+
+        /* Поиск серий */
+        .ep-search-input {
+            width: 100px;
+            padding: 6px 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 12px;
+            outline: none;
+            font-family: inherit;
+        }
+        .ep-search-input:focus { border-color: var(--accent-primary); }
 
         /* Сетка серий */
         .episodes-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(54px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(55px, 1fr));
             gap: 8px;
         }
 
-        .ep-btn {
-            padding: 10px 0;
-            background: #242f3d;
-            color: #fff;
-            border: 1px solid #2b394a;
-            border-radius: 10px;
+        .ep-card {
+            padding: 11px 0;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
             font-size: 14px;
-            font-weight: 600;
+            font-weight: 700;
+            color: var(--text-main);
             text-align: center;
             cursor: pointer;
-            transition: all 0.2s ease;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            backdrop-filter: blur(12px);
         }
 
-        .ep-btn.active {
-            background: #64b5f6;
-            border-color: #64b5f6;
-            color: #17212b;
+        .ep-card:active { transform: scale(0.95); }
+
+        .ep-card.active {
+            background: var(--active-gradient);
+            color: #090a10;
+            border-color: transparent;
+            box-shadow: var(--active-button-glow);
         }
 
-        .loading {
+        .loading-screen {
+            position: absolute;
+            inset: 0;
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100%;
-            font-size: 15px;
-            color: #7f91a4;
+            gap: 12px;
+            background: #090a10;
+            color: var(--accent-primary);
+            font-weight: 600;
+            font-size: 14px;
+            z-index: 10;
         }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid rgba(0, 242, 254, 0.15);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
-    <div class="player-container">
-        <div id="loader" class="loading">⏳ Загрузка плеера...</div>
+
+    <!-- Плеер -->
+    <div class="player-wrapper">
+        <div id="loader" class="loading-screen">
+            <div class="spinner"></div>
+            <div>Загрузка плеера...</div>
+        </div>
         <iframe id="anime-iframe" src="" allow="fullscreen; autoplay" allowfullscreen style="display: none;"></iframe>
     </div>
 
-    <div class="content">
-        <div id="anime-title" class="title">Аниме</div>
+    <!-- Основной контент -->
+    <div class="scrollable-content">
 
-        <div>
-            <div class="section-label">🎙 Выберите озвучку / плеер:</div>
-            <div id="dubbing-container" class="dubbing-list"></div>
+        <!-- Постер и название -->
+        <div class="hero-card">
+            <img id="anime-poster" class="poster-img" src="https://static.yani.tv/img/no-photo.jpg" alt="Poster">
+            <div class="hero-info">
+                <div id="anime-title" class="anime-title">Загрузка...</div>
+                <div class="badges-row">
+                    <div id="badge-status" class="badge badge-status">Загрузка</div>
+                    <div id="badge-episodes" class="badge">Серий: --</div>
+                </div>
+            </div>
         </div>
 
+        <!-- Озвучка -->
         <div>
-            <div class="section-label">▶️ Выберите серию:</div>
+            <div class="section-header">
+                <div class="section-title">🎙 Озвучка / Плеер</div>
+            </div>
+            <div id="dubbing-container" class="dubbing-container"></div>
+        </div>
+
+        <!-- Серии -->
+        <div>
+            <div class="section-header">
+                <div class="section-title">▶️ Серии</div>
+                <input type="number" id="ep-search" class="ep-search-input" placeholder="№ серии..." oninput="filterEpisodes()">
+            </div>
             <div id="episodes-container" class="episodes-grid"></div>
         </div>
+
     </div>
 
     <script>
@@ -154,7 +314,6 @@
         let videos = [];
         let groupedByDubbing = {};
         let currentDubKey = '';
-        let currentIframeUrl = '';
 
         async function fetchWithCorsFallback(apiUrl) {
             try {
@@ -168,21 +327,33 @@
             return JSON.parse(proxyJson.contents);
         }
 
-        async function loadVideos() {
+        async function initApp() {
             try {
                 const apiUrl = `https://old.yummyani.me/api/anime/${animeId}?need_videos=true`;
                 const json = await fetchWithCorsFallback(apiUrl);
-                const responseData = json.response || {};
+                const respObj = json.response || {};
 
-                document.getElementById('anime-title').innerText = responseData.title || 'Аниме';
-                videos = responseData.videos || [];
+                // Заполняем инфо
+                document.getElementById('anime-title').innerText = respObj.title || 'Аниме';
+                document.getElementById('badge-status').innerText = respObj.anime_status?.title || 'Онгоинг';
+                
+                const count = respObj.episodes?.count || '?';
+                const aired = respObj.episodes?.aired || 0;
+                document.getElementById('badge-episodes').innerText = `Серий: ${aired} / ${count}`;
 
+                if (respObj.poster?.fullsize) {
+                    let poster = respObj.poster.fullsize;
+                    if (poster.startswith('//')) poster = 'https:' + poster;
+                    document.getElementById('anime-poster').src = poster;
+                }
+
+                videos = respObj.videos || [];
                 if (!videos.length) {
-                    document.getElementById('loader').innerText = '❌ Серии не найдены.';
+                    document.getElementById('loader').innerHTML = '❌ Серии не найдены';
                     return;
                 }
 
-                // Группировка
+                // Группировка по озвучкам
                 groupedByDubbing = {};
                 videos.forEach(v => {
                     const player = v.data?.player || 'Плеер';
@@ -200,7 +371,7 @@
                 renderDubbings();
             } catch (err) {
                 console.error(err);
-                document.getElementById('loader').innerText = '❌ Ошибка загрузки данных.';
+                document.getElementById('loader').innerHTML = '❌ Ошибка загрузки видео';
             }
         }
 
@@ -214,16 +385,16 @@
             currentDubKey = keys[0];
 
             keys.forEach(key => {
-                const btn = document.createElement('button');
-                btn.className = `dub-btn ${key === currentDubKey ? 'active' : ''}`;
-                btn.innerText = key;
-                btn.onclick = () => {
+                const pill = document.createElement('div');
+                pill.className = `dub-pill ${key === currentDubKey ? 'active' : ''}`;
+                pill.innerText = key;
+                pill.onclick = () => {
                     currentDubKey = key;
-                    document.querySelectorAll('.dub-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
+                    document.querySelectorAll('.dub-pill').forEach(p => p.classList.remove('active'));
+                    pill.classList.add('active');
                     renderEpisodes();
                 };
-                container.appendChild(btn);
+                container.appendChild(pill);
             });
 
             renderEpisodes();
@@ -236,27 +407,36 @@
             const epList = groupedByDubbing[currentDubKey] || [];
             if (!epList.length) return;
 
-            currentIframeUrl = epList[0].iframe_url;
-
-            epList.forEach((v, index) => {
-                const btn = document.createElement('button');
-                btn.className = `ep-btn ${index === 0 ? 'active' : ''}`;
-                btn.innerText = v.number;
-                btn.onclick = () => {
-                    document.querySelectorAll('.ep-btn').forEach(b => b.classList.remove('active'));
-                    btn.classList.add('active');
+            epList.forEach((v, idx) => {
+                const card = document.createElement('div');
+                card.className = `ep-card ${idx === 0 ? 'active' : ''}`;
+                card.innerText = v.number;
+                card.dataset.ep = v.number;
+                card.onclick = () => {
+                    document.querySelectorAll('.ep-card').forEach(c => c.classList.remove('active'));
+                    card.classList.add('active');
                     setIframeUrl(v.iframe_url);
                 };
-                container.appendChild(btn);
+                container.appendChild(card);
             });
 
-            setIframeUrl(currentIframeUrl);
+            setIframeUrl(epList[0].iframe_url);
+        }
+
+        function filterEpisodes() {
+            const q = document.getElementById('ep-search').value.trim();
+            document.querySelectorAll('.ep-card').forEach(card => {
+                if (!q || card.dataset.ep === q) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
         }
 
         function setIframeUrl(url) {
             if (!url) return;
             let fullUrl = url.startsWith('//') ? 'https:' + url : url;
-            
             const iframe = document.getElementById('anime-iframe');
             const loader = document.getElementById('loader');
 
@@ -265,7 +445,7 @@
             loader.style.display = 'none';
         }
 
-        loadVideos();
+        initApp();
     </script>
 </body>
 </html>
