@@ -24,7 +24,6 @@
             --text-main: #f5f5f7;
             --text-sub: #94a3b8;
             --glow-cyan: 0 0 25px rgba(0, 242, 254, 0.45);
-            --glow-purple: 0 0 25px rgba(225, 0, 255, 0.45);
         }
 
         * { 
@@ -47,7 +46,7 @@
             position: relative;
         }
 
-        /* 🌌 Анимированный неоновый фон с плавающими орбами */
+        /* 🌌 Анимированный неоновый фон */
         .bg-orbs-container {
             position: fixed;
             inset: 0;
@@ -141,24 +140,39 @@
             gap: 20px;
         }
 
-        /* Hero Карточка Аниме с парящим эффектом */
+        /* Hero Карточка Аниме */
         .hero-card {
             display: flex;
+            align-items: center;
+            justify-content: space-between;
             gap: 16px;
             background: var(--apple-glass);
             backdrop-filter: blur(35px);
             -webkit-backdrop-filter: blur(35px);
             border: 1px solid var(--card-border);
             border-radius: 22px;
-            padding: 14px;
+            padding: 14px 18px;
             box-shadow: 0 12px 35px rgba(0, 0, 0, 0.35);
             animation: fadeInUp 0.7s cubic-bezier(0.16, 1, 0.3, 1);
-            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+            transition: all 0.3s ease;
         }
 
         .hero-card:hover {
-            border-color: rgba(0, 242, 254, 0.3);
-            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4), 0 0 20px rgba(0, 242, 254, 0.15);
+            border-color: rgba(0, 242, 254, 0.35);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4), 0 0 25px rgba(0, 242, 254, 0.18);
+        }
+
+        .hero-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            overflow: hidden;
+        }
+
+        .poster-link {
+            display: block;
+            flex-shrink: 0;
+            text-decoration: none;
         }
 
         .poster-img {
@@ -166,14 +180,14 @@
             height: 100px;
             border-radius: 14px;
             object-fit: cover;
-            flex-shrink: 0;
             box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
             border: 1px solid rgba(255, 255, 255, 0.12);
             transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            cursor: pointer;
         }
 
-        .hero-card:hover .poster-img {
-            transform: scale(1.05) rotate(-2deg);
+        .poster-link:hover .poster-img {
+            transform: scale(1.06) rotate(-2deg);
         }
 
         .hero-info {
@@ -184,14 +198,21 @@
             overflow: hidden;
         }
 
-        .anime-title {
+        .anime-title-link {
             font-size: 18px;
             font-weight: 700;
             color: #fff;
+            text-decoration: none;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
             letter-spacing: -0.3px;
+            transition: color 0.2s ease;
+            display: inline-block;
+        }
+
+        .anime-title-link:hover {
+            color: var(--accent-primary);
         }
 
         .badges-row {
@@ -217,6 +238,37 @@
             border-color: rgba(0, 242, 254, 0.3); 
         }
 
+        /* Кнопка ссылки на сайт YummyAni */
+        .site-link-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 10px 18px;
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid var(--card-border);
+            border-radius: 99px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #fff;
+            text-decoration: none;
+            white-space: nowrap;
+            flex-shrink: 0;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            backdrop-filter: blur(20px);
+        }
+
+        .site-link-btn:hover {
+            background: var(--accent-gradient);
+            color: #000;
+            border-color: transparent;
+            transform: translateY(-2px) scale(1.04);
+            box-shadow: 0 6px 20px rgba(0, 242, 254, 0.4);
+        }
+
+        .site-link-btn:active {
+            transform: translateY(0) scale(0.96);
+        }
+
         .section-header {
             display: flex;
             justify-content: space-between;
@@ -236,7 +288,6 @@
             gap: 6px;
         }
 
-        /* Перенос кнопок в сетку + пружинистый ховер */
         .pills-scroll-container {
             display: flex;
             flex-wrap: wrap;
@@ -257,8 +308,6 @@
             transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             backdrop-filter: blur(25px);
             -webkit-backdrop-filter: blur(25px);
-            position: relative;
-            overflow: hidden;
         }
 
         .pill-btn:hover {
@@ -273,7 +322,6 @@
             transform: translateY(0) scale(0.96);
         }
 
-        /* 💫 Дышащая неоновая пульсация активной кнопки */
         .pill-btn.active {
             background: var(--accent-gradient);
             color: #000;
@@ -298,7 +346,6 @@
             50% { box-shadow: 0 6px 28px rgba(225, 0, 255, 0.75); }
         }
 
-        /* Поле поиска серий */
         .ep-search-input {
             width: 100px;
             padding: 6px 12px;
@@ -317,7 +364,6 @@
             box-shadow: 0 0 12px rgba(0, 242, 254, 0.3);
         }
 
-        /* Сетка серий */
         .episodes-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
@@ -420,14 +466,24 @@
 
             <!-- Постер и название -->
             <div class="hero-card">
-                <img id="anime-poster" class="poster-img" src="https://static.yani.tv/img/no-photo.jpg" alt="Poster">
-                <div class="hero-info">
-                    <div id="anime-title" class="anime-title">Загрузка...</div>
-                    <div class="badges-row">
-                        <div id="badge-status" class="badge badge-status">Загрузка</div>
-                        <div id="badge-episodes" class="badge">Серий: --</div>
+                <div class="hero-left">
+                    <a id="poster-link" class="poster-link" href="#" target="_blank">
+                        <img id="anime-poster" class="poster-img" src="https://static.yani.tv/img/no-photo.jpg" alt="Poster">
+                    </a>
+                    <div class="hero-info">
+                        <a id="anime-title-link" class="anime-title-link" href="#" target="_blank">Загрузка...</a>
+                        <div class="badges-row">
+                            <div id="badge-status" class="badge badge-status">Загрузка</div>
+                            <div id="badge-episodes" class="badge">Серий: --</div>
+                        </div>
                     </div>
                 </div>
+
+                <!-- Кнопка перехода на YummyAni -->
+                <a id="site-btn-link" class="site-link-btn" href="#" target="_blank">
+                    <span>🔗 На YummyAni</span>
+                    <span>↗</span>
+                </a>
             </div>
 
             <!-- 1. Выбор Озвучки -->
@@ -491,7 +547,21 @@
                 const json = await fetchWithCorsFallback(apiUrl);
                 const respObj = json.response || {};
 
-                document.getElementById('anime-title').innerText = respObj.title || 'Аниме';
+                // Формируем прямую ссылку на аниме на YummyAni
+                let catalogUrl = `https://old.yummyani.me/catalog/item/${animeId}`;
+                if (respObj.url) {
+                    catalogUrl = respObj.url.startsWith('http') ? respObj.url : 'https:' + respObj.url;
+                } else if (respObj.anime_url) {
+                    catalogUrl = `https://old.yummyani.me/catalog/item/${respObj.anime_url}`;
+                }
+
+                // Привязываем ссылки
+                const titleLink = document.getElementById('anime-title-link');
+                titleLink.innerText = respObj.title || 'Аниме';
+                titleLink.href = catalogUrl;
+
+                document.getElementById('poster-link').href = catalogUrl;
+                document.getElementById('site-btn-link').href = catalogUrl;
                 
                 let statusText = 'Онгоинг';
                 if (typeof respObj.status === 'string') {
