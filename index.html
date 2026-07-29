@@ -3,59 +3,146 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anime Web Player</title>
+    <title>Anime Mini App Player</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        body { margin: 0; background: #121212; color: #fff; font-family: sans-serif; }
-        .player-container { width: 100vw; height: 56.25vw; max-height: 70vh; background: #000; }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: #0f0f12; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
+        .player-wrapper { width: 100vw; height: 56.25vw; max-height: 65vh; background: #000; position: relative; }
         iframe { width: 100%; height: 100%; border: none; }
-        .controls { padding: 15px; }
-        select, button { padding: 10px; background: #222; color: #fff; border: 1px solid #444; border-radius: 8px; margin-right: 5px; }
+        .controls-container { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+        .control-group { display: flex; flex-direction: column; gap: 6px; }
+        label { font-size: 13px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
+        select { padding: 12px; background: #1e1e24; color: #fff; border: 1px solid #333; border-radius: 10px; font-size: 15px; outline: none; }
+        select:focus { border-color: #0088cc; }
+        .title-header { font-size: 18px; font-weight: bold; margin-bottom: 4px; color: #40a9ff; }
+        .loading { display: flex; align-items: center; justify-content: center; height: 100%; font-size: 16px; color: #888; }
     </style>
 </head>
 <body>
-    <div class="player-container">
-        <iframe id="anime-iframe" src="" allowfullscreen></iframe>
+    <div class="player-wrapper">
+        <div id="loader" class="loading">⏳ Загрузка плеера...</div>
+        <iframe id="anime-iframe" src="" allowfullscreen style="display: none;"></iframe>
     </div>
 
-    <div class="controls">
-        <label>Озвучка:</label>
-        <select id="dubbing-select" onchange="changeDubbing()"></select>
+    <div class="controls-container">
+        <div id="anime-title" class="title-header"></div>
 
-        <label>Серия:</label>
-        <select id="episode-select" onchange="changeEpisode()"></select>
+        <div class="control-group">
+            <label for="dubbing-select">🎙 Озвучка / Плеер:</label>
+            <select id="dubbing-select" onchange="onDubbingChange()"></select>
+        </div>
+
+        <div class="control-group">
+            <label for="episode-select">▶️ Серия:</label>
+            <select id="episode-select" onchange="onEpisodeChange()"></select>
+        </div>
     </div>
 
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Разворачиваем Mini App на весь экран
+        if (tg) {
+            tg.ready();
+            tg.expand(); // Разворачиваем на весь экран Telegram
+        }
 
         const urlParams = new URLSearchParams(window.location.search);
-        const animeId = urlParams.get('anime_id');
+        const animeId = urlParams.get('anime_id') || '12094'; // По умолчанию fallback
 
-        let videosData = [];
+        let videos = [];
+        let groupedByDubbing = {};
 
-        async function loadAnimeVideos() {
-            const resp = await fetch(`https://old.yummyani.me/api/anime/${animeId}?need_videos=true`);
-            const json = await resp.json();
-            videosData = json.response.videos || [];
-            
-            initPlayer();
+        async function loadVideos() {
+            try {
+                const resp = await fetch(`https://old.yummyani.me/api/anime/${animeId}?need_videos=true`);
+                const json = await resp.json();
+                const responseData = json.response || {};
+
+                document.getElementById('anime-title').innerText = responseData.title || 'Аниме';
+                videos = responseData.videos || [];
+
+                if (!videos.length) {
+                    document.getElementById('loader').innerText = '❌ Видеозаписи не найдены.';
+                    return;
+                }
+
+                // Группируем видео по озвучке/плееру
+                groupedByDubbing = {};
+                videos.forEach(v => {
+                    const player = v.data?.player || 'Плеер';
+                    const dub = v.data?.dubbing || 'Озвучка';
+                    const key = `${dub} (${player})`;
+
+                    if (!groupedByDubbing[key]) groupedByDubbing[key] = [];
+                    groupedByDubbing[key].push(v);
+                });
+
+                // Сортируем серии по возрастанию
+                Object.keys(groupedByDubbing).forEach(key => {
+                    groupedByDubbing[key].sort((a, b) => parseInt(a.number || 0) - parseInt(b.number || 0));
+                });
+
+                populateDubbings();
+            } catch (err) {
+                console.error(err);
+                document.getElementById('loader').innerText = '❌ Ошибка загрузки данных API.';
+            }
         }
 
-        function initPlayer() {
-            if (!videosData.length) return;
+        function populateDubbings() {
+            const dubSelect = document.getElementById('dubbing-select');
+            dubSelect.innerHTML = '';
+
+            const keys = Object.keys(groupedByDubbing);
+            keys.forEach(key => {
+                const opt = document.createElement('option');
+                opt.value = key;
+                opt.textContent = key;
+                dubSelect.appendChild(opt);
+            });
+
+            if (keys.length > 0) {
+                dubSelect.value = keys[0];
+                onDubbingChange();
+            }
+        }
+
+        function onDubbingChange() {
+            const selectedDub = document.getElementById('dubbing-select').value;
+            const epSelect = document.getElementById('episode-select');
+            epSelect.innerHTML = '';
+
+            const epList = groupedByDubbing[selectedDub] || [];
+            epList.forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v.iframe_url;
+                opt.textContent = `${v.number} серия`;
+                epSelect.appendChild(opt);
+            });
+
+            if (epList.length > 0) {
+                setIframeUrl(epList[0].iframe_url);
+            }
+        }
+
+        function onEpisodeChange() {
+            const iframeUrl = document.getElementById('episode-select').value;
+            setIframeUrl(iframeUrl);
+        }
+
+        function setIframeUrl(url) {
+            if (!url) return;
+            let fullUrl = url.startsWith('//') ? 'https:' + url : url;
             
-            // Заполняем список серий и озвучек
             const iframe = document.getElementById('anime-iframe');
-            // Указываем https: перед //kodikplayer.com/
-            let firstIframe = videosData[0].iframe_url;
-            if (firstIframe.startsWith('//')) firstIframe = 'https:' + firstIframe;
-            
-            iframe.src = firstIframe;
+            const loader = document.getElementById('loader');
+
+            iframe.src = fullUrl;
+            iframe.style.display = 'block';
+            loader.style.display = 'none';
         }
 
-        loadAnimeVideos();
+        loadVideos();
     </script>
 </body>
 </html>
