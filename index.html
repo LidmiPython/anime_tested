@@ -2,34 +2,111 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anime Mini App Player</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Anime Web Player</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         * { box-sizing: border-box; }
-        body { margin: 0; background: #0f0f12; color: #fff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; }
-        .player-wrapper { width: 100vw; height: 56.25vw; max-height: 65vh; background: #000; position: relative; }
-        iframe { width: 100%; height: 100%; border: none; }
-        .controls-container { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
-        .control-group { display: flex; flex-direction: column; gap: 6px; }
-        label { font-size: 13px; color: #aaa; text-transform: uppercase; letter-spacing: 0.5px; }
-        select { padding: 12px; background: #1e1e24; color: #fff; border: 1px solid #333; border-radius: 10px; font-size: 15px; outline: none; }
-        select:focus { border-color: #0088cc; }
-        .title-header { font-size: 18px; font-weight: bold; margin-bottom: 4px; color: #40a9ff; }
-        .loading { display: flex; align-items: center; justify-content: center; height: 100%; font-size: 16px; color: #888; }
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background: #0d0d11;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Видеоплеер на 100% свободной высоты и ширины ПК/мобильного */
+        .player-wrapper {
+            flex: 1;
+            width: 100%;
+            height: 100%;
+            position: relative;
+            background: #000;
+        }
+
+        iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* Нижная панель управления */
+        .controls-container {
+            flex-shrink: 0;
+            padding: 12px 16px;
+            background: #18181c;
+            border-top: 1px solid #2a2a30;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        label {
+            font-size: 13px;
+            color: #aaa;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        select {
+            padding: 8px 12px;
+            background: #24242c;
+            color: #fff;
+            border: 1px solid #3a3a46;
+            border-radius: 8px;
+            font-size: 14px;
+            outline: none;
+            cursor: pointer;
+            min-width: 120px;
+        }
+
+        select:focus {
+            border-color: #0088cc;
+        }
+
+        .title-header {
+            font-size: 15px;
+            font-weight: 600;
+            color: #40a9ff;
+            width: 100%;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            font-size: 16px;
+            color: #888;
+        }
     </style>
 </head>
 <body>
     <div class="player-wrapper">
         <div id="loader" class="loading">⏳ Загрузка плеера...</div>
-        <iframe id="anime-iframe" src="" allowfullscreen style="display: none;"></iframe>
+        <iframe id="anime-iframe" src="" allow="fullscreen; autoplay" allowfullscreen style="display: none;"></iframe>
     </div>
 
     <div class="controls-container">
-        <div id="anime-title" class="title-header"></div>
+        <div id="anime-title" class="title-header">Загрузка...</div>
 
         <div class="control-group">
-            <label for="dubbing-select">🎙 Озвучка / Плеер:</label>
+            <label for="dubbing-select">🎙 Озвучка:</label>
             <select id="dubbing-select" onchange="onDubbingChange()"></select>
         </div>
 
@@ -43,30 +120,46 @@
         const tg = window.Telegram.WebApp;
         if (tg) {
             tg.ready();
-            tg.expand(); // Разворачиваем на весь экран Telegram
+            tg.expand();
         }
 
         const urlParams = new URLSearchParams(window.location.search);
-        const animeId = urlParams.get('anime_id') || '12094'; // По умолчанию fallback
+        const animeId = urlParams.get('anime_id') || '12094';
 
         let videos = [];
         let groupedByDubbing = {};
 
+        async function fetchWithCorsFallback(apiUrl) {
+            // 1. Попытка прямого запроса
+            try {
+                const resp = await fetch(apiUrl);
+                if (resp.ok) return await resp.json();
+            } catch (e) {
+                console.warn('Direct fetch blocked by CORS, trying proxy...');
+            }
+
+            // 2. Резервный запуск через CORS Proxy для 100% гарантии на ПК
+            const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(apiUrl)}`;
+            const proxyResp = await fetch(proxyUrl);
+            const proxyJson = await proxyResp.json();
+            return JSON.parse(proxyJson.contents);
+        }
+
         async function loadVideos() {
             try {
-                const resp = await fetch(`https://old.yummyani.me/api/anime/${animeId}?need_videos=true`);
-                const json = await resp.json();
+                const apiUrl = `https://old.yummyani.me/api/anime/${animeId}?need_videos=true`;
+                const json = await fetchWithCorsFallback(apiUrl);
                 const responseData = json.response || {};
 
                 document.getElementById('anime-title').innerText = responseData.title || 'Аниме';
                 videos = responseData.videos || [];
 
                 if (!videos.length) {
-                    document.getElementById('loader').innerText = '❌ Видеозаписи не найдены.';
+                    document.getElementById('loader').innerText = '❌ Серии не найдены.';
                     return;
                 }
 
-                // Группируем видео по озвучке/плееру
+                // Группируем серии по озвучкам
                 groupedByDubbing = {};
                 videos.forEach(v => {
                     const player = v.data?.player || 'Плеер';
@@ -77,7 +170,7 @@
                     groupedByDubbing[key].push(v);
                 });
 
-                // Сортируем серии по возрастанию
+                // Сортировка серий
                 Object.keys(groupedByDubbing).forEach(key => {
                     groupedByDubbing[key].sort((a, b) => parseInt(a.number || 0) - parseInt(b.number || 0));
                 });
@@ -85,7 +178,7 @@
                 populateDubbings();
             } catch (err) {
                 console.error(err);
-                document.getElementById('loader').innerText = '❌ Ошибка загрузки данных API.';
+                document.getElementById('loader').innerText = '❌ Ошибка загрузки видеозаписей.';
             }
         }
 
