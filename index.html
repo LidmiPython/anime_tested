@@ -66,11 +66,10 @@
             padding: 16px;
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 18px;
             scroll-behavior: smooth;
         }
 
-        /* Кастомный скроллбар */
         .scrollable-content::-webkit-scrollbar { width: 4px; }
         .scrollable-content::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 4px; }
 
@@ -139,11 +138,11 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         .section-title {
-            font-size: 13px;
+            font-size: 12px;
             font-weight: 700;
             text-transform: uppercase;
             letter-spacing: 1px;
@@ -153,17 +152,17 @@
             gap: 6px;
         }
 
-        /* Табы озвучек */
-        .dubbing-container {
+        /* Табы озвучек и плееров */
+        .pills-scroll-container {
             display: flex;
             gap: 8px;
             overflow-x: auto;
             padding-bottom: 4px;
         }
-        .dubbing-container::-webkit-scrollbar { display: none; }
+        .pills-scroll-container::-webkit-scrollbar { display: none; }
 
-        .dub-pill {
-            padding: 9px 16px;
+        .pill-btn {
+            padding: 8px 15px;
             background: var(--card-bg);
             border: 1px solid var(--card-border);
             border-radius: 30px;
@@ -176,7 +175,7 @@
             backdrop-filter: blur(12px);
         }
 
-        .dub-pill.active {
+        .pill-btn.active {
             background: var(--active-gradient);
             color: #090a10;
             border-color: transparent;
@@ -185,10 +184,16 @@
             transform: translateY(-1px);
         }
 
+        .player-pill.active {
+            background: linear-gradient(135deg, #7f00ff 0%, #e100ff 100%);
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(225, 0, 255, 0.4);
+        }
+
         /* Поиск серий */
         .ep-search-input {
-            width: 100px;
-            padding: 6px 10px;
+            width: 90px;
+            padding: 5px 8px;
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid var(--card-border);
             border-radius: 8px;
@@ -282,19 +287,27 @@
             </div>
         </div>
 
-        <!-- Озвучка -->
+        <!-- 1. Выбор Озвучки -->
         <div>
             <div class="section-header">
-                <div class="section-title">🎙 Озвучка / Плеер</div>
+                <div class="section-title">🎙 Озвучка</div>
             </div>
-            <div id="dubbing-container" class="dubbing-container"></div>
+            <div id="dubbing-container" class="pills-scroll-container"></div>
         </div>
 
-        <!-- Серии -->
+        <!-- 2. Выбор Плеера -->
+        <div>
+            <div class="section-header">
+                <div class="section-title">📺 Плеер</div>
+            </div>
+            <div id="player-container" class="pills-scroll-container"></div>
+        </div>
+
+        <!-- 3. Выбор Серии -->
         <div>
             <div class="section-header">
                 <div class="section-title">▶️ Серии</div>
-                <input type="number" id="ep-search" class="ep-search-input" placeholder="№ серии..." oninput="filterEpisodes()">
+                <input type="number" id="ep-search" class="ep-search-input" placeholder="№..." oninput="filterEpisodes()">
             </div>
             <div id="episodes-container" class="episodes-grid"></div>
         </div>
@@ -312,8 +325,10 @@
         const animeId = urlParams.get('anime_id') || '12094';
 
         let videos = [];
-        let groupedByDubbing = {};
-        let currentDubKey = '';
+        // Иерархия: dataStore[dubbingName][playerName] = [videoObj1, videoObj2...]
+        let dataStore = {};
+        let currentDubbing = '';
+        let currentPlayer = '';
 
         async function fetchWithCorsFallback(apiUrl) {
             try {
@@ -333,7 +348,6 @@
                 const json = await fetchWithCorsFallback(apiUrl);
                 const respObj = json.response || {};
 
-                // Заполняем инфо
                 document.getElementById('anime-title').innerText = respObj.title || 'Аниме';
                 
                 let statusText = 'Онгоинг';
@@ -360,19 +374,23 @@
                     return;
                 }
 
-                // Группировка по озвучкам
-                groupedByDubbing = {};
+                // Строим иерархическую структуру dataStore[dubbing][player] = [...]
+                dataStore = {};
                 videos.forEach(v => {
-                    const player = v.data?.player || 'Плеер';
                     const dub = v.data?.dubbing || 'Озвучка';
-                    const key = `${dub} (${player})`;
+                    const player = v.data?.player || 'Плеер';
 
-                    if (!groupedByDubbing[key]) groupedByDubbing[key] = [];
-                    groupedByDubbing[key].push(v);
+                    if (!dataStore[dub]) dataStore[dub] = {};
+                    if (!dataStore[dub][player]) dataStore[dub][player] = [];
+                    
+                    dataStore[dub][player].push(v);
                 });
 
-                Object.keys(groupedByDubbing).forEach(key => {
-                    groupedByDubbing[key].sort((a, b) => parseInt(a.number || 0) - parseInt(b.number || 0));
+                // Сортируем серии
+                Object.keys(dataStore).forEach(dub => {
+                    Object.keys(dataStore[dub]).forEach(player => {
+                        dataStore[dub][player].sort((a, b) => parseInt(a.number || 0) - parseInt(b.number || 0));
+                    });
                 });
 
                 renderDubbings();
@@ -382,36 +400,65 @@
             }
         }
 
+        // Рендер ряда озвучек
         function renderDubbings() {
             const container = document.getElementById('dubbing-container');
             container.innerHTML = '';
 
-            const keys = Object.keys(groupedByDubbing);
-            if (!keys.length) return;
+            const dubbings = Object.keys(dataStore);
+            if (!dubbings.length) return;
 
-            currentDubKey = keys[0];
+            currentDubbing = dubbings[0];
 
-            keys.forEach(key => {
-                const pill = document.createElement('div');
-                pill.className = `dub-pill ${key === currentDubKey ? 'active' : ''}`;
-                pill.innerText = key;
-                pill.onclick = () => {
-                    currentDubKey = key;
-                    document.querySelectorAll('.dub-pill').forEach(p => p.classList.remove('active'));
-                    pill.classList.add('active');
+            dubbings.forEach(dub => {
+                const btn = document.createElement('div');
+                btn.className = `pill-btn ${dub === currentDubbing ? 'active' : ''}`;
+                btn.innerText = dub;
+                btn.onclick = () => {
+                    currentDubbing = dub;
+                    document.querySelectorAll('#dubbing-container .pill-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                    renderPlayers();
+                };
+                container.appendChild(btn);
+            });
+
+            renderPlayers();
+        }
+
+        // Рендер ряда плееров под выбранную озвучку
+        function renderPlayers() {
+            const container = document.getElementById('player-container');
+            container.innerHTML = '';
+
+            const playersMap = dataStore[currentDubbing] || {};
+            const players = Object.keys(playersMap);
+            if (!players.length) return;
+
+            currentPlayer = players[0];
+
+            players.forEach(player => {
+                const btn = document.createElement('div');
+                btn.className = `pill-btn player-pill ${player === currentPlayer ? 'active' : ''}`;
+                btn.innerText = player;
+                btn.onclick = () => {
+                    currentPlayer = player;
+                    document.querySelectorAll('#player-container .pill-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
                     renderEpisodes();
                 };
-                container.appendChild(pill);
+                container.appendChild(btn);
             });
 
             renderEpisodes();
         }
 
+        // Рендер сетки серий
         function renderEpisodes() {
             const container = document.getElementById('episodes-container');
             container.innerHTML = '';
 
-            const epList = groupedByDubbing[currentDubKey] || [];
+            const epList = (dataStore[currentDubbing] && dataStore[currentDubbing][currentPlayer]) || [];
             if (!epList.length) return;
 
             epList.forEach((v, idx) => {
