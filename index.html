@@ -238,7 +238,6 @@
             border-color: rgba(0, 242, 254, 0.3); 
         }
 
-        /* Кнопка ссылки на сайт YummyAni */
         .site-link-btn {
             display: inline-flex;
             align-items: center;
@@ -444,7 +443,7 @@
 </head>
 <body>
 
-    <!-- 🌌 Анимированный плазменный фон -->
+    <!-- 🌌 Анимированный неоновый фон -->
     <div class="bg-orbs-container">
         <div class="orb orb-1"></div>
         <div class="orb orb-2"></div>
@@ -456,7 +455,7 @@
         <div class="player-wrapper">
             <div id="loader" class="loading-screen">
                 <div class="spinner"></div>
-                <div>Загрузка видео...</div>
+                <div id="loader-text">Загрузка видео...</div>
             </div>
             <iframe id="anime-iframe" src="" allow="fullscreen; autoplay" allowfullscreen style="display: none;"></iframe>
         </div>
@@ -481,7 +480,7 @@
 
                 <!-- Кнопка перехода на YummyAni -->
                 <a id="site-btn-link" class="site-link-btn" href="#" target="_blank">
-                    <span>🔗 На YummyAni</span>
+                    <span id="site-btn-text">🔗 На YummyAni</span>
                     <span>↗</span>
                 </a>
             </div>
@@ -489,7 +488,7 @@
             <!-- 1. Выбор Озвучки -->
             <div>
                 <div class="section-header">
-                    <div class="section-title">🎙 Озвучка</div>
+                    <div id="label-dubbing" class="section-title">🎙 Озвучка</div>
                 </div>
                 <div id="dubbing-container" class="pills-scroll-container"></div>
             </div>
@@ -497,7 +496,7 @@
             <!-- 2. Выбор Плеера -->
             <div>
                 <div class="section-header">
-                    <div class="section-title">📺 Плеер</div>
+                    <div id="label-player" class="section-title">📺 Плеер</div>
                 </div>
                 <div id="player-container" class="pills-scroll-container"></div>
             </div>
@@ -505,7 +504,7 @@
             <!-- 3. Выбор Серии -->
             <div>
                 <div class="section-header">
-                    <div class="section-title">▶️ Серии</div>
+                    <div id="label-episodes" class="section-title">▶️ Серии</div>
                     <input type="number" id="ep-search" class="ep-search-input" placeholder="№..." oninput="filterEpisodes()">
                 </div>
                 <div id="episodes-container" class="episodes-grid"></div>
@@ -523,6 +522,54 @@
 
         const urlParams = new URLSearchParams(window.location.search);
         const animeId = urlParams.get('anime_id') || '12094';
+        const userLang = urlParams.get('lang') || 'ru';
+
+        // 🌐 Словарь локализации интерфейса сайта
+        const I18N = {
+            ru: {
+                dubbing: "🎙 Озвучка",
+                player: "📺 Плеер",
+                episodes: "▶️ Серии",
+                search_ph: "№...",
+                yummy_btn: "🔗 На YummyAni",
+                aired_episodes: "Серий",
+                loading: "Загрузка видео...",
+                episodes_not_found: "❌ Серии не найдены",
+                load_error: "❌ Ошибка загрузки видео"
+            },
+            uk: {
+                dubbing: "🎙 Озвучка",
+                player: "📺 Плеєр",
+                episodes: "▶️ Серії",
+                search_ph: "№...",
+                yummy_btn: "🔗 На YummyAni",
+                aired_episodes: "Серій",
+                loading: "Завантаження відео...",
+                episodes_not_found: "❌ Серії не знайдені",
+                load_error: "❌ Помилка завантаження відео"
+            },
+            en: {
+                dubbing: "🎙 Dubbing",
+                player: "📺 Player",
+                episodes: "▶️ Episodes",
+                search_ph: "№...",
+                yummy_btn: "🔗 On YummyAni",
+                aired_episodes: "Episodes",
+                loading: "Loading video...",
+                episodes_not_found: "❌ Episodes not found",
+                load_error: "❌ Video loading error"
+            }
+        };
+
+        const currentI18n = I18N[userLang] || I18N.ru;
+
+        // Применяем локализованные тексты к интерфейсу
+        document.getElementById('label-dubbing').innerText = currentI18n.dubbing;
+        document.getElementById('label-player').innerText = currentI18n.player;
+        document.getElementById('label-episodes').innerText = currentI18n.episodes;
+        document.getElementById('ep-search').placeholder = currentI18n.search_ph;
+        document.getElementById('site-btn-text').innerText = currentI18n.yummy_btn;
+        document.getElementById('loader-text').innerText = currentI18n.loading;
 
         let videos = [];
         let dataStore = {};
@@ -547,7 +594,6 @@
                 const json = await fetchWithCorsFallback(apiUrl);
                 const respObj = json.response || {};
 
-                // Формируем прямую ссылку на аниме на YummyAni
                 let catalogUrl = `https://old.yummyani.me/catalog/item/${animeId}`;
                 if (respObj.url) {
                     catalogUrl = respObj.url.startsWith('http') ? respObj.url : 'https:' + respObj.url;
@@ -555,7 +601,6 @@
                     catalogUrl = `https://old.yummyani.me/catalog/item/${respObj.anime_url}`;
                 }
 
-                // Привязываем ссылки
                 const titleLink = document.getElementById('anime-title-link');
                 titleLink.innerText = respObj.title || 'Аниме';
                 titleLink.href = catalogUrl;
@@ -573,7 +618,7 @@
                 
                 const count = respObj.episodes?.count || '?';
                 const aired = respObj.episodes?.aired || 0;
-                document.getElementById('badge-episodes').innerText = `Серий: ${aired} / ${count}`;
+                document.getElementById('badge-episodes').innerText = `${currentI18n.aired_episodes}: ${aired} / ${count}`;
 
                 if (respObj.poster && respObj.poster.fullsize) {
                     let poster = respObj.poster.fullsize;
@@ -583,7 +628,7 @@
 
                 videos = respObj.videos || [];
                 if (!videos.length) {
-                    document.getElementById('loader').innerHTML = '❌ Серии не найдены';
+                    document.getElementById('loader').innerHTML = currentI18n.episodes_not_found;
                     return;
                 }
 
@@ -607,7 +652,7 @@
                 renderDubbings();
             } catch (err) {
                 console.error(err);
-                document.getElementById('loader').innerHTML = '❌ Ошибка загрузки видео';
+                document.getElementById('loader').innerHTML = currentI18n.load_error;
             }
         }
 
