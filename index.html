@@ -335,15 +335,22 @@
 
                 // Заполняем инфо
                 document.getElementById('anime-title').innerText = respObj.title || 'Аниме';
-                document.getElementById('badge-status').innerText = respObj.anime_status?.title || 'Онгоинг';
+                
+                let statusText = 'Онгоинг';
+                if (typeof respObj.status === 'string') {
+                    statusText = respObj.status;
+                } else if (respObj.anime_status && respObj.anime_status.title) {
+                    statusText = respObj.anime_status.title;
+                }
+                document.getElementById('badge-status').innerText = statusText;
                 
                 const count = respObj.episodes?.count || '?';
                 const aired = respObj.episodes?.aired || 0;
                 document.getElementById('badge-episodes').innerText = `Серий: ${aired} / ${count}`;
 
-                if (respObj.poster?.fullsize) {
+                if (respObj.poster && respObj.poster.fullsize) {
                     let poster = respObj.poster.fullsize;
-                    if (poster.startswith('//')) poster = 'https:' + poster;
+                    if (poster.startsWith('//')) poster = 'https:' + poster;
                     document.getElementById('anime-poster').src = poster;
                 }
 
